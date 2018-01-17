@@ -4,14 +4,15 @@ Terraform template to launch a 3 node Cassandra cluster on AWS EC2 t2.small inst
 
 ## Dependencies
 
-* Terraform 0.11.2+
-* AWS account  - Free, if you don't have an account you can sign up at https://aws.amazon.com/. In this example we use T2.small instances.
+* Terraform 0.11.2+ - For installation instructions go [here](https://www.terraform.io/intro/getting-started/install.html). Or you can use a Docker image like this [one](https://hub.docker.com/r/hashicorp/terraform/).
+* AWS account  - Free; if you don't have an account you can sign up at https://aws.amazon.com/. In this example we use T2.small instances.
 
 ## QuickStart
 
 * Clone the repo: `git clone git@github.com:nickbatts/terraform-aws-linux-cassandra-cluster
  && cd terraform-aws-linux-cassandra-cluster
 `
+* change key_name variable to name of your own key
 * `terraform plan` - check to make sure there are no mistakes
 * `terraform apply` - review and confirm resources to be created
 * `terraform destroy` - terminate instances and clean-up resources
@@ -27,7 +28,7 @@ Terraform template to launch a 3 node Cassandra cluster on AWS EC2 t2.small inst
 
 * `nodetool status` - check cluster status and other nodes
 
-# Authors
+## Authors
 
 * Nick Batts
 

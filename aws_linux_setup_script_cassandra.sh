@@ -39,9 +39,9 @@ sed -i "s/rpc_address: localhost/rpc_address: 0.0.0.0/g" /etc/cassandra/conf/cas
 sed -i "s/# broadcast_rpc_address: 1.2.3.4/broadcast_rpc_address: $INSTANCE_IP/g" /etc/cassandra/conf/cassandra.yaml
 sed -i "s/endpoint_snitch: SimpleSnitch/endpoint_snitch: Ec2Snitch/g" /etc/cassandra/conf/cassandra.yaml
 
-sed -i "s/Djava.rmi.server.hostname=<public name>/Djava.rmi.server.hostname=$INSTANCE_IP/g" /etc/cassandra/conf/cassandra-env.sh
+sed -i "s/# JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname=<public name>/JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname=$INSTANCE_IP/g" /etc/cassandra/conf/cassandra-env.sh
 
 chkconfig cassandra on 			# start cassandra automatically on boot
 service cassandra start			# cassandra does not start automatically
 
-reboot
+#reboot
