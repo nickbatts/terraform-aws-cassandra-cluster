@@ -2,18 +2,18 @@ provider "aws" {
   region = "us-west-2"
 }
 
-data "aws_subnet_ids" "private" {
-  vpc_id = "${aws_default_vpc.default.id}"
-}
+#data "aws_subnet_ids" "private" {
+#  vpc_id = "${aws_default_vpc.default.id}"
+#}
 
 # load availability zones
 data "aws_availability_zones" "available" {}
 
-resource "aws_default_vpc" "default" {
-  tags {
-      Name = "Default VPC"
-  }
-}
+#resource "aws_default_vpc" "default" {
+#  tags {
+#      Name = "Default VPC"
+#  }
+#}
 
 resource "aws_instance" "tf-cassandra-cluster-seed-1" {
   count = "1"
@@ -24,20 +24,22 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
   #subnet_id  = "${element(data.aws_subnet_ids.private.ids, count.index)}"
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
-  key_name = "BattsNickAWS"
+  key_name = "${var.key_name}"
 
   user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
 
   connection {
     user = "ec2-user"
-    private_key = "${file("/Users/nick/Documents/BattsNickAWS.pem")}"
+    private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
 
   provisioner "remote-exec" {
     inline = [
+"sudo mv nofile.txt newfile.txt",
 "sudo sleep 90",
-"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
+"echo 'testing connection - ${self.private_ip}' | sudo tee testing.txt",
+"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
 "sudo sleep 20",
 "sudo reboot"
 ]
@@ -60,22 +62,24 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
   #subnet_id  = "${element(data.aws_subnet_ids.private.ids, count.index)}"
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
-  key_name = "BattsNickAWS"
+  key_name = "NuovoNick"
 
   user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
 
   connection {
-    user = "root"
-    private_key = "${file("/Users/nick/Documents/BattsNickAWS.pem")}"
+    user = "ec2-user"
+    private_key = "${file("/Users/nick/Documents/NuovoNick.pem")}"
     timeout = "5m"
   }
 
   provisioner "remote-exec" {
     inline = [
-"sleep 90",
-"sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
-"sleep 20",
-"reboot"
+"sudo mv nofile.txt newfile.txt",
+"sudo sleep 90",
+"echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt",
+"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
+"sudo sleep 20",
+"sudo reboot"
     ]
   }
 
@@ -85,6 +89,7 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
     Owner =           "BattsNick"
     Version =         "0.9"
   }
+  depends_on = ["aws_instance.tf-cassandra-cluster-seed-1"]
 }
 
 resource "aws_instance" "tf-cassandra-cluster" {
@@ -96,22 +101,23 @@ resource "aws_instance" "tf-cassandra-cluster" {
   #subnet_id  = "${element(data.aws_subnet_ids.private.ids, count.index)}"
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
-  key_name = "BattsNickAWS"
+  key_name = "NuovoNick"
 
   user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
 
   connection {
-    user = "root"
-    private_key = "${file("/Users/nick/Documents/BattsNickAWS.pem")}"
+    user = "ec2-user"
+    private_key = "${file("/Users/nick/Documents/NuovoNick.pem")}"
     timeout = "5m"
   }
 
   provisioner "remote-exec" {
     inline = [
-"sleep 90",
-"sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
-"sleep 20",
-"reboot"
+"sudo sleep 90",
+"echo 'testing connection' | sudo tee testing.txt",
+"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
+"sudo sleep 20",
+"sudo reboot"
     ]
   }
 
@@ -193,11 +199,15 @@ resource "aws_security_group" "terraform-cassandra-sg" {
   }
 }
 
-output "public_ip" {
-  value = "${aws_instance.tf-cassandra-cluster.*.public_ip}"
+
+output "public_dns_1" {
+  value = "${aws_instance.tf-cassandra-cluster-seed-1.public_dns}"
 }
 
+output "public_dns_2" {
+  value = "${aws_instance.tf-cassandra-cluster-seed-2.public_dns}"
+}
 
-output "public_dns" {
-  value = "${aws_instance.tf-cassandra-cluster.*.public_dns}"
+output "public_dns_3" {
+  value = "${aws_instance.tf-cassandra-cluster.public_dns}"
 }
