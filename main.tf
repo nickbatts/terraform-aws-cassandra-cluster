@@ -35,13 +35,14 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
   }
 
   provisioner "remote-exec" {
-    inline = [
-"sudo mv nofile.txt newfile.txt",
-"sudo sleep 90",
-"echo 'testing connection - ${self.private_ip}' | sudo tee testing.txt",
-"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
-"sudo sleep 20",
-"sudo reboot"
+    inline = [<<-EOF
+echo "testing"
+sudo sleep 90
+echo 'testing connection - ${self.private_ip}' | sudo tee testing.txt
+sudo sed -i "s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g" /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete'
+sudo reboot
+                EOF
 ]
   }
 
@@ -62,25 +63,25 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
   #subnet_id  = "${element(data.aws_subnet_ids.private.ids, count.index)}"
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
-  key_name = "NuovoNick"
+  key_name = "${var.key_name}"
 
   user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
 
   connection {
     user = "ec2-user"
-    private_key = "${file("/Users/nick/Documents/NuovoNick.pem")}"
+    private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
 
   provisioner "remote-exec" {
-    inline = [
-"sudo mv nofile.txt newfile.txt",
-"sudo sleep 90",
-"echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt",
-"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
-"sudo sleep 20",
-"sudo reboot"
-    ]
+    inline = [<<-EOF
+sudo sleep 90
+echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete'
+sudo reboot
+                EOF
+]
   }
 
   tags {
@@ -101,24 +102,25 @@ resource "aws_instance" "tf-cassandra-cluster" {
   #subnet_id  = "${element(data.aws_subnet_ids.private.ids, count.index)}"
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
-  key_name = "NuovoNick"
+  key_name = "${var.key_name}"
 
   user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
 
   connection {
     user = "ec2-user"
-    private_key = "${file("/Users/nick/Documents/NuovoNick.pem")}"
+    private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
 
   provisioner "remote-exec" {
-    inline = [
-"sudo sleep 90",
-"echo 'testing connection' | sudo tee testing.txt",
-"sudo sed -i \"s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}\"/g\" /etc/cassandra/conf/cassandra.yaml",
-"sudo sleep 20",
-"sudo reboot"
-    ]
+    inline = [<<-EOF
+sudo sleep 90
+echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete'
+sudo reboot
+                EOF
+]
   }
 
   tags {
