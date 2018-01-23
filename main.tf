@@ -17,7 +17,7 @@ data "aws_availability_zones" "available" {}
 
 resource "aws_instance" "tf-cassandra-cluster-seed-1" {
   count = "1"
-  ami = "ami-7707a10f"
+  ami = "${var.os == "linux" ? var.cluster_ami["linux"] : var.cluster_ami["ubuntu"]}"
   instance_type = "t2.small"
 
   availability_zone = "${element(data.aws_availability_zones.available.names, 0)}"
@@ -26,10 +26,10 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
 
   key_name = "${var.key_name}"
 
-  user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
+  user_data = "${file("./aws_${var.os}_setup_script_cassandra.sh")}"
 
   connection {
-    user = "ec2-user"
+    user = "${var.os == "linux" ? "ec2-user" : "ubuntu"}"
     private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
@@ -39,7 +39,7 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
 echo "testing"
 sudo sleep 90
 echo 'testing connection - ${self.private_ip}' | sudo tee testing.txt
-sudo sed -i "s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g" /etc/cassandra/conf/cassandra.yaml
+sudo sed -i "s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g" /etc/cassandra/cassandra.yaml
 echo 'SED complete'
 sudo reboot
                 EOF
@@ -47,7 +47,7 @@ sudo reboot
   }
 
   tags {
-    Name =            "1terraform-cassandra-cluster-${count.index}"
+    Name =            "tf-cassandra-cluster-seed-1"
     Description =     "testing deploying cassandra cluster with terraform and AWS linux"
     Owner =           "BattsNick"
     Version =         "0.9"
@@ -56,7 +56,7 @@ sudo reboot
 
 resource "aws_instance" "tf-cassandra-cluster-seed-2" {
   count = "1"
-  ami = "ami-7707a10f"
+  ami = "${var.os == "linux" ? var.cluster_ami["linux"] : var.cluster_ami["ubuntu"]}"
   instance_type = "t2.small"
 
   availability_zone = "${element(data.aws_availability_zones.available.names, 1)}"
@@ -65,10 +65,10 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
 
   key_name = "${var.key_name}"
 
-  user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
+  user_data = "${file("./aws_${var.os}_setup_script_cassandra.sh")}"
 
   connection {
-    user = "ec2-user"
+    user = "${var.os == "linux" ? "ec2-user" : "ubuntu"}"
     private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
@@ -77,7 +77,7 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
     inline = [<<-EOF
 sudo sleep 90
 echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
-sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}"/g' /etc/cassandra/cassandra.yaml
 echo 'SED complete'
 sudo reboot
                 EOF
@@ -85,7 +85,7 @@ sudo reboot
   }
 
   tags {
-    Name =            "2terraform-cassandra-cluster-${count.index}"
+    Name =            "tf-cassandra-cluster-seed-2"
     Description =     "testing deploying cassandra cluster with terraform and AWS linux"
     Owner =           "BattsNick"
     Version =         "0.9"
@@ -93,9 +93,9 @@ sudo reboot
   depends_on = ["aws_instance.tf-cassandra-cluster-seed-1"]
 }
 
-resource "aws_instance" "tf-cassandra-cluster" {
+resource "aws_instance" "tf-cassandra-cluster-node-1" {
   count = "1"
-  ami = "ami-7707a10f"
+  ami = "${var.os == "linux" ? var.cluster_ami["linux"] : var.cluster_ami["ubuntu"]}"
   instance_type = "t2.small"
 
   availability_zone = "${element(data.aws_availability_zones.available.names, 2)}"
@@ -104,10 +104,10 @@ resource "aws_instance" "tf-cassandra-cluster" {
 
   key_name = "${var.key_name}"
 
-  user_data = "${file("./aws_linux_setup_script_cassandra.sh")}"
+  user_data = "${file("./aws_${var.os}_setup_script_cassandra.sh")}"
 
   connection {
-    user = "ec2-user"
+    user = "${var.os == "linux" ? "ec2-user" : "ubuntu"}"
     private_key = "${file("${var.key_location}")}"
     timeout = "5m"
   }
@@ -116,7 +116,7 @@ resource "aws_instance" "tf-cassandra-cluster" {
     inline = [<<-EOF
 sudo sleep 90
 echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
-sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}"/g' /etc/cassandra/cassandra.yaml
 echo 'SED complete'
 sudo reboot
                 EOF
@@ -124,7 +124,7 @@ sudo reboot
   }
 
   tags {
-    Name =            "terraform-cassandra-cluster-${count.index}"
+    Name =            "tf-cassandra-cluster-node-1"
     Description =     "testing deploying cassandra cluster with terraform and AWS linux"
     Owner =           "BattsNick"
     Version =         "0.9"
@@ -211,5 +211,9 @@ output "public_dns_2" {
 }
 
 output "public_dns_3" {
-  value = "${aws_instance.tf-cassandra-cluster.public_dns}"
+  value = "${aws_instance.tf-cassandra-cluster-node-1.public_dns}"
+}
+
+output "OS" {
+  value = "${var.os}"
 }
