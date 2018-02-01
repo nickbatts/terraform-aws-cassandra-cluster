@@ -1,6 +1,8 @@
-# terraform-aws-linux-cassandra-cluster
+# terraform-aws-cassandra-cluster
 
 Terraform template to launch a 3 node Cassandra cluster on AWS EC2 t2.small instances.
+
+Choose 'linux' or 'ubuntu' based AMI 
 
 ## Dependencies
 

@@ -25,6 +25,7 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
   vpc_security_group_ids = ["${aws_security_group.terraform-cassandra-sg.id}"]
 
   key_name = "${var.key_name}"
+  iam_instance_profile = "cassandra_backup_role"
 
   user_data = "${file("./aws_${var.os}_setup_script_cassandra.sh")}"
 
@@ -36,11 +37,18 @@ resource "aws_instance" "tf-cassandra-cluster-seed-1" {
 
   provisioner "remote-exec" {
     inline = [<<-EOF
-echo "testing"
-sudo sleep 90
-echo 'testing connection - ${self.private_ip}' | sudo tee testing.txt
-sudo sed -i "s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g" /etc/cassandra/cassandra.yaml
-echo 'SED complete'
+date
+echo "waiting for Cassandra to finish installing"
+WAIT=#
+while [ ! -f /etc/cassandra/conf/cassandra.yaml ]
+do
+  echo -ne "$WAIT\r"
+  WAIT=$(echo $WAIT)#
+    sleep 5
+done
+echo 'instance private ip - ${self.private_ip}' | sudo tee testing.txt
+sudo sed -i "s/- seeds: \"127.0.0.1\"/- seeds: \"${self.private_ip}\"/g" /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete!'
 sudo reboot
                 EOF
 ]
@@ -48,9 +56,9 @@ sudo reboot
 
   tags {
     Name =            "tf-cassandra-cluster-seed-1"
-    Description =     "testing deploying cassandra cluster with terraform and AWS linux"
+    Description =     "Cassandra cluster deployed with terraform and AWS ${var.os}"
     Owner =           "BattsNick"
-    Version =         "0.9"
+    Version =         "1.0"
   }
 }
 
@@ -75,10 +83,18 @@ resource "aws_instance" "tf-cassandra-cluster-seed-2" {
 
   provisioner "remote-exec" {
     inline = [<<-EOF
-sudo sleep 90
-echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
-sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}"/g' /etc/cassandra/cassandra.yaml
-echo 'SED complete'
+date
+echo "waiting for Cassandra to finish installing"
+WAIT=#
+while [ ! -f /etc/cassandra/conf/cassandra.yaml ]
+do
+  echo -ne "$WAIT\r"
+  WAIT=$(echo $WAIT)#
+    sleep 5
+done
+echo 'instance private ip - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete!'
 sudo reboot
                 EOF
 ]
@@ -86,9 +102,9 @@ sudo reboot
 
   tags {
     Name =            "tf-cassandra-cluster-seed-2"
-    Description =     "testing deploying cassandra cluster with terraform and AWS linux"
+    Description =     "Cassandra cluster deployed with terraform and AWS ${var.os}"
     Owner =           "BattsNick"
-    Version =         "0.9"
+    Version =         "1.0"
   }
   depends_on = ["aws_instance.tf-cassandra-cluster-seed-1"]
 }
@@ -114,10 +130,18 @@ resource "aws_instance" "tf-cassandra-cluster-node-1" {
 
   provisioner "remote-exec" {
     inline = [<<-EOF
-sudo sleep 90
-echo 'testing connection - ${self.private_ip},${aws_instance.tf-cassandra-cluster-seed-1.private_ip}' | sudo tee testing.txt
-sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}"/g' /etc/cassandra/cassandra.yaml
-echo 'SED complete'
+date
+echo "waiting for Cassandra to finish installing"
+WAIT=#
+while [ ! -f /etc/cassandra/conf/cassandra.yaml ]
+do
+  echo -ne "$WAIT\r"
+  WAIT=$(echo $WAIT)#
+    sleep 5
+done
+echo 'seeds - ${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}' | sudo tee testing.txt
+sudo sed -i 's/- seeds: "127.0.0.1"/- seeds: "${aws_instance.tf-cassandra-cluster-seed-1.private_ip},${aws_instance.tf-cassandra-cluster-seed-2.private_ip}"/g' /etc/cassandra/conf/cassandra.yaml
+echo 'SED complete!'
 sudo reboot
                 EOF
 ]
@@ -125,9 +149,9 @@ sudo reboot
 
   tags {
     Name =            "tf-cassandra-cluster-node-1"
-    Description =     "testing deploying cassandra cluster with terraform and AWS linux"
+    Description =     "Cassandra cluster deployed with terraform and AWS ${var.os}"
     Owner =           "BattsNick"
-    Version =         "0.9"
+    Version =         "1.0"
   }
   depends_on = ["aws_instance.tf-cassandra-cluster-seed-2"]
 }
